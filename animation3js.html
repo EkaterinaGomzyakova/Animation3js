@@ -1,273 +1,503 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Animation</title>
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-      html,
-      body {
-        width: 100%;
-        height: 100vh;
-        font-family: 'Arial';
-        background-color: #000;
-        color: #fff;
-      }
-      p {
-        font-size: 13px;
-        font-weight: 400px;
-        line-height: 1.5;
-        opacity: 0.5;
-      }
-      .slider-wrapper {
-        position: fixed;
-        width: 100vw;
-        height: 100vh;
-        overflow: hidden;
-      }
-      canvas {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-      }
-      .overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: #000;
-        background: radial-gradient(
-          circle,
-          rgba (0, 0, 0, 0) 75%,
-          rgba (0, 0, 0, 0.5) 100%
-        );
-        z-index: 1;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="slider-wrapper">
-      <canvas></canvas>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Aski AI — Полный код с чёрными дырами</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:Arial, sans-serif; background:#000; color:#fff; }
+
+    header {
+      position:absolute; top:0; left:0; width:100%; padding:20px 40px;
+      display:flex; justify-content:space-between; align-items:center;
+      z-index:10;
+    }
+    .logo { font-size:24px; font-weight:bold; }
+    nav ul { list-style:none; display:flex; gap:32px; }
+    nav a { color:#fff; text-decoration:none; }
+
+    /* 1-й экран */
+    section.hero {
+      position:relative;
+      height:100vh;
+      overflow:hidden;
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      text-align:center; padding:0 20px;
+    }
+    /* чёрная дыра в hero */
+    #hero-canvas {
+      position:absolute;
+      top:-100%;
+      left:0;
+      width:100%;
+      height:200%;
+      z-index:0;
+      pointer-events:none;
+    }
+    section.hero h1,
+    section.hero p,
+    .chat-container,
+    .hero-action-block {
+      position:relative; z-index:1;
+    }
+    section.hero h1 { font-size:48px; margin-bottom:16px; }
+    section.hero p  { font-size:18px; color:#ccc; margin-bottom:32px; }
+
+    .chat-container {
+      width:100%; max-width:800px; max-height:30vh;
+      overflow-y:auto; display:flex; flex-direction:column; gap:8px;
+      scrollbar-width:none; -ms-overflow-style:none;
+      mask-image:linear-gradient(to bottom, transparent 0%, black 10%, black 100%);
+      -webkit-mask-image:linear-gradient(to bottom, transparent 0%, black 10%, black 100%);
+      margin-bottom:16px;
+    }
+    .chat-container::-webkit-scrollbar { display:none; }
+    .chat-message {
+      padding:12px 16px; border-radius:12px;
+      font-size:16px; line-height:1.4; max-width:70%;
+      word-wrap:break-word; text-align:left;
+      transition:opacity .3s;
+    }
+    .chat-message.user { align-self:flex-end; background:#5050ff; color:#fff; }
+    .chat-message.ai   { align-self:flex-start; background:rgba(255,255,255,0.1); color:#fff; }
+    .chat-message.behind { opacity:.5; }
+
+    .hero-action-block {
+      width:100%; max-width:800px; background:#000;
+    }
+    .ask-block { display:flex; }
+    .ask-input {
+      flex:1; padding:12px 16px; background:rgba(255,255,255,0.1);
+      border:1px solid rgba(255,255,255,0.2); border-right:none;
+      border-radius:4px 0 0 4px; color:#fff; font-size:16px;
+    }
+    .ask-send-btn {
+      padding:0 20px; background:#5050ff; border:1px solid #5050ff;
+      border-radius:0 4px 4px 0; color:#fff; cursor:pointer;
+    }
+
+    /* 2-й экран */
+    section.animation-screen {
+      position:relative; width:100%; height:100vh; overflow:hidden;
+      margin-top:80px;
+    }
+    .animation-title {
+      position:absolute; top:20px; width:100%; text-align:center;
+      font-size:32px; color:#fff; z-index:2;
+    }
+    #bg-canvas {
+      position:absolute; top:0; left:0;
+      width:100%; height:100%;
+    }
+
+    /* 3-й экран */
+    section.process-screen {
+      position:relative; width:100%; height:100vh; background:#000;
+      display:flex; align-items:center; padding:0 40px; margin-top:80px;
+    }
+    .timeline { display:flex; flex-direction:column; gap:24px; }
+    .process-step {
+      opacity:0; display:flex; align-items:center; gap:12px;
+      color:rgba(255,255,255,0.5);
+      transition:opacity .3s, color .3s, transform .3s;
+    }
+    .process-step.visible { opacity:1; }
+    .process-step.active  { color:#fff; }
+    .process-step .dot {
+      width:10px; height:10px; background:#5050ff;
+      border-radius:50%; transition:transform .3s;
+    }
+    .process-step.active .dot { transform:scale(2); }
+
+    /* 4-й экран */
+    section.consultation-screen {
+      position:relative; min-height:100vh; margin-top:80px;
+      background:#000; display:flex; align-items:center;
+      justify-content:center; overflow:hidden; padding:80px 20px;
+    }
+    #consult-canvas {
+      position:absolute; top:-50vh; left:0;
+      width:100%; height:200vh; z-index:0; pointer-events:none;
+    }
+    .consultation-container {
+      position:relative; z-index:1;
+      display:flex; flex-direction:column; width:100%; max-width:600px;
+      height:70vh; padding:20px; gap:24px;
+    }
+    .consultation-pill {
+      padding:6px 16px; border:1px solid rgba(255,255,255,0.4);
+      border-radius:12px; font-size:14px; color:#fff;
+    }
+    .consultation-container h2 {
+      font-size:36px; line-height:1.2; text-align:center;
+    }
+    .consultation-form {
+      margin-top:auto; display:flex; flex-direction:column; gap:16px;
+    }
+    .consultation-form input,
+    .consultation-form select {
+      padding:12px 16px; background:rgba(255,255,255,0.05);
+      border:1px solid rgba(255,255,255,0.2); border-radius:8px;
+      color:#fff; font-size:16px;
+    }
+    .consultation-form button {
+      padding:14px; background:#5050ff; border:none; border-radius:8px;
+      color:#fff; cursor:pointer; font-size:18px;
+    }
+    .consultation-container .decor-msg {
+      position:absolute; padding:8px 12px; border-radius:8px;
+      opacity:.5; pointer-events:none; font-size:14px;
+    }
+    .consultation-container .decor-msg.user { background:#5050ff; }
+    .consultation-container .decor-msg.ai   { background:rgba(255,255,255,0.1); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">aski</div>
+    <nav>
+      <ul>
+        <li><a href="#">Сервисы</a></li>
+        <li><a href="#">Кейсы</a></li>
+        <li><a href="#">Тарифы</a></li>
+        <li><a href="#">Компания</a></li>
+      </ul>
+    </nav>
+    <button class="btn-contact">Связаться</button>
+  </header>
+
+  <!-- 1-й экран -->
+  <section class="hero">
+    <canvas id="hero-canvas"></canvas>
+    <h1>AI-секретарь, который помнит все созвоны</h1>
+    <p>Искусственный интеллект, который мыслит как ваш бизнес</p>
+    <div class="chat-container"></div>
+    <div class="hero-action-block">
+      <div class="ask-block">
+        <input class="ask-input" placeholder="Спросить Aski AI"/>
+        <button class="ask-send-btn">↑</button>
+      </div>
     </div>
-    <div class="overlay"></div>
+  </section>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
-    <script>
-      window.addEventListener('load', () => {
-        const lenis = new Lenis()
-        function raf(time) {
-          lenis.raf(time)
-          requestAnimationFrame(raf)
+  <!-- 2-й экран -->
+  <section class="animation-screen">
+    <div class="animation-title">В контексте ответов — все ваши коммуникации</div>
+    <canvas id="bg-canvas"></canvas>
+  </section>
+
+  <!-- 3-й экран -->
+  <section class="process-screen">
+    <div class="timeline">
+      <div class="process-step"><div class="dot"></div><span>Отправляете ссылку</span></div>
+      <div class="process-step"><div class="dot"></div><span>Aski подключился</span></div>
+      <div class="process-step"><div class="dot"></div><span>Фиксирует встречу</span></div>
+      <div class="process-step"><div class="dot"></div><span>Транскрибирует</span></div>
+      <div class="process-step"><div class="dot"></div><span>Встреча завершилась</span></div>
+      <div class="process-step"><div class="dot"></div><span>Готовит конспект</span></div>
+      <div class="process-step"><div class="dot"></div><span>Рассылает всей команде</span></div>
+      <div class="process-step"><div class="dot"></div><span>Сохраняет встречу в базе знаний</span></div>
+    </div>
+  </section>
+
+  <!-- 4-й экран -->
+  <section class="consultation-screen">
+    <canvas id="consult-canvas"></canvas>
+    <div class="consultation-container">
+      <div class="consultation-pill">Бесплатная консультация</div>
+      <h2>Поможем с выбором и ответим на все вопросы</h2>
+      <form class="consultation-form">
+        <input type="text" placeholder="Имя"/>
+        <select>
+          <option disabled selected>Как с вами связаться?</option>
+          <option>Telegram</option>
+          <option>WhatsApp</option>
+          <option>Телефон</option>
+          <option>Email</option>
+        </select>
+        <button type="submit">Оставить заявку</button>
+      </form>
+    </div>
+  </section>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+  window.addEventListener('load', () => {
+    // 1-й экран: чат + клонированные сообщения
+    const chat = document.querySelector('.chat-container');
+    const input = document.querySelector('.ask-input');
+    const sendBtn = document.querySelector('.ask-send-btn');
+    const consult = document.querySelector('.consultation-container');
+    let idCounter = 0, placed = [], clones = new Map();
+
+    setTimeout(() => addMsg('user','Aski, привет! Что ты умеешь делать?'), 500);
+    setTimeout(() => addMsg('ai','Привет! Я умею фиксировать и анализировать звонки, суммировать переписки.'), 1200);
+
+    function addMsg(type, text) {
+      const d = document.createElement('div');
+      d.className = `chat-message ${type}`;
+      d.textContent = text;
+      d.dataset.id = `m${idCounter++}`;
+      chat.appendChild(d);
+      chat.scrollTop = chat.scrollHeight;
+      updateDecor();
+    }
+    function sendMsg() {
+      const t = input.value.trim();
+      if (!t) return;
+      addMsg('user', t);
+      input.value = '';
+    }
+    sendBtn.addEventListener('click', sendMsg);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { sendMsg(); e.preventDefault(); }
+    });
+    chat.addEventListener('scroll', updateDecor);
+
+    function updateDecor() {
+      const cb = chat.getBoundingClientRect();
+      document.querySelectorAll('.chat-message').forEach(m => {
+        const rb = m.getBoundingClientRect();
+        const out = rb.bottom < cb.top || rb.top > cb.bottom;
+        m.classList.toggle('behind', out);
+        const id = m.dataset.id;
+        if (out && !clones.has(id)) {
+          const c = m.cloneNode(true);
+          c.classList.add('decor-msg', m.classList.contains('user') ? 'user' : 'ai');
+          c.removeAttribute('data-id');
+          consult.appendChild(c);
+          const cr = consult.getBoundingClientRect();
+          const w = c.offsetWidth, h = c.offsetHeight;
+          let x, y, ov, att = 0;
+          do {
+            x = Math.random() * (cr.width - w);
+            y = Math.random() * (cr.height - h);
+            ov = placed.some(r => x < r.x + r.w && x + w > r.x && y < r.y + r.h && y + h > r.y);
+            att++;
+          } while(ov && att < 20);
+          c.style.left = x + 'px';
+          c.style.top  = y + 'px';
+          placed.push({ id, x, y, w, h });
+          clones.set(id, c);
         }
-        requestAnimationFrame(raf)
-
-        const images = []
-        let loadedImageCount = 0
-
-        function loadImages() {
-          for (let i = 1; i <= 7; i++) {
-            const img = new Image()
-            img.onload = function () {
-              images.push(img)
-              loadedImageCount++
-
-              if (loadedImageCount === 7) {
-                initializeScene()
-              }
-            }
-            img.onerror = function () {
-              loadedImageCount++
-              if (loadedImageCount === 7) {
-                initializeScene()
-              }
-            }
-            img.src = `./img${i}.jpg`
-          }
+        if (!out && clones.has(id)) {
+          clones.get(id).remove();
+          clones.delete(id);
+          placed = placed.filter(r => r.id !== id);
         }
-        function initializeScene() {
-          const scene = new THREE.Scene()
-          const camera = new THREE.PerspectiveCamera(
-            45,
-            window.innerWidth / window.innerHeight,
-            0.1,
-            1000
-          )
+      });
+    }
 
-          const renderer = new THREE.WebGLRenderer({
-            canvas: document.querySelector('canvas'),
-            antialias: true,
-            powerPreference: 'high-performance'
-          })
+    // статичная дыра для hero и consult
+    function setupStaticHole(canvasId, scale) {
+      const canvas = document.getElementById(canvasId);
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 1000);
+      camera.position.z = 50;
+      const renderer = new THREE.WebGLRenderer({ antialias:true, canvas, alpha:true });
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+      window.addEventListener('resize', () => {
+        camera.aspect = innerWidth/innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(innerWidth, innerHeight);
+      });
+      const sz = 512;
+      const gc = document.createElement('canvas');
+      gc.width = gc.height = sz;
+      const ctx = gc.getContext('2d');
+      const grad = ctx.createRadialGradient(sz/2,sz/2,sz*0.1,sz/2,sz/2,sz*0.4);
+      grad.addColorStop(0,'rgba(0,0,0,1)');
+      grad.addColorStop(0.2,'rgba(0,0,0,1)');
+      grad.addColorStop(0.5,'rgba(80,80,200,0.9)');
+      grad.addColorStop(0.8,'rgba(80,80,200,0.5)');
+      grad.addColorStop(1,'rgba(80,80,200,0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0,0,sz,sz);
+      const mat = new THREE.SpriteMaterial({
+        map: new THREE.CanvasTexture(gc),
+        blending: THREE.AdditiveBlending,
+        transparent: true,
+        depthWrite: false
+      });
+      const spr = new THREE.Sprite(mat);
+      spr.scale.set(scale, scale, 1);
+      scene.add(spr);
+      renderer.render(scene, camera);
+    }
+    setupStaticHole('hero-canvas', 50);
+    setupStaticHole('consult-canvas', 50);
 
-          renderer.setSize(window.innerWidth, window.innerHeight)
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-          renderer.setClearColor(0x000000)
+    // 2-й экран: пульсирующая дыра + карточки
+    (function(){
+      const canvas = document.getElementById('bg-canvas');
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 1000);
+      camera.position.z = 50;
+      const renderer = new THREE.WebGLRenderer({ antialias:true, canvas, alpha:true });
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+      window.addEventListener('resize', () => {
+        camera.aspect = innerWidth/innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(innerWidth, innerHeight);
+      });
 
-          const parentWidth = 20
-          const parentHeight = 75
-          const curvature = 35
-          const segmentsX = 200
-          const segmentsY = 200
+      // градиент дыры
+      const sz = 512;
+      const gc = document.createElement('canvas');
+      gc.width = gc.height = sz;
+      const gtx = gc.getContext('2d');
+      const grad = gtx.createRadialGradient(sz/2,sz/2,sz*0.1,sz/2,sz/2,sz*0.4);
+      grad.addColorStop(0,'rgba(0,0,0,1)');
+      grad.addColorStop(0.2,'rgba(0,0,0,1)');
+      grad.addColorStop(0.5,'rgba(80,80,200,0.9)');
+      grad.addColorStop(0.8,'rgba(80,80,200,0.5)');
+      grad.addColorStop(1,'rgba(80,80,200,0)');
+      gtx.fillStyle = grad;
+      gtx.fillRect(0,0,sz,sz);
 
-          const parentGeometry = new THREE.PlaneGeometry(
-            parentWidth,
-            parentHeight,
-            segmentsX,
-            segmentsY
-          )
+      const holeMat = new THREE.SpriteMaterial({
+        map: new THREE.CanvasTexture(gc),
+        blending: THREE.AdditiveBlending,
+        transparent: true,
+        depthWrite: false
+      });
+      const hole = new THREE.Sprite(holeMat);
+      const baseScale = 50;
+      hole.scale.set(baseScale, baseScale, 1);
+      scene.add(hole);
 
-          const positions = parentGeometry.attributes.position.array
-          for (let i = 0; i < positions.length; i += 3) {
-            const y = positions[i + 1]
-            const distanceFromCenter = Math.abs(y / (parentHeight / 2))
-            positions[i + 2] = Math.pow(distanceFromCenter, 2) * curvature
-          }
-          parentGeometry.computeVertexNormals()
+      // текст Aski AI
+      const tc = document.createElement('canvas');
+      tc.width = 512; tc.height = 128;
+      const t2 = tc.getContext('2d');
+      t2.font = 'bold 64px Arial';
+      t2.fillStyle = 'rgba(80,80,200,0.9)';
+      t2.textAlign = 'center'; t2.textBaseline = 'middle';
+      t2.fillText('Aski AI', 256, 64);
+      const textMat = new THREE.SpriteMaterial({
+        map: new THREE.CanvasTexture(tc),
+        transparent: true,
+        depthWrite: false
+      });
+      const textSpr = new THREE.Sprite(textMat);
+      textSpr.scale.set(30,8,1);
+      textSpr.position.set(0,0,1);
+      scene.add(textSpr);
 
-          const totalSlides = 7
-          const slideHeight = 15
-          const gap = 0.5
-          const cycleHeight = totalSlides * (slideHeight + gap)
+      // карточки
+      const stacks = [
+        { label:'Чаты в телеграм', icon:'💬' },
+        { label:'Созвоны',         icon:'📞' },
+        { label:'Напоминания',     icon:'⏰' }
+      ];
+      const per = 10, rad = 30;
+      const angles = stacks.map((_,i)=>i*2*Math.PI/stacks.length);
+      const easeOut = x=>1-Math.pow(1-x,3);
 
-          const textureCanvas = document.createElement('canvas')
-          const ctx = textureCanvas.getContext('2d', {
-            alpha: false,
-            willReadFrequently: false
-          })
+      function makeTex(txt,icon){
+        const W=512,H=256,R=20;
+        const c2 = document.createElement('canvas');
+        c2.width=W; c2.height=H;
+        const g2 = c2.getContext('2d');
+        g2.fillStyle='#000'; g2.strokeStyle='#333'; g2.lineWidth=2;
+        g2.beginPath();
+        g2.moveTo(R,0); g2.lineTo(W-R,0);
+        g2.arcTo(W,0,W,R,R); g2.lineTo(W,H-R);
+        g2.arcTo(W,H,W-R,H,R); g2.lineTo(R,H);
+        g2.arcTo(0,H,0,H-R,R); g2.lineTo(0,R);
+        g2.arcTo(0,0,R,0,R); g2.closePath();
+        g2.fill(); g2.stroke();
+        const isz=64;
+        g2.font=`bold ${isz}px serif`;
+        g2.textAlign='center'; g2.textBaseline='middle'; g2.fillStyle='#fff';
+        g2.fillText(icon,R+isz/2,H/2);
+        g2.font='bold 32px Arial';
+        g2.textAlign='left'; g2.textBaseline='middle';
+        g2.fillText(txt,R+isz+20,H/2);
+        const tx = new THREE.CanvasTexture(c2);
+        tx.needsUpdate = true;
+        return tx;
+      }
 
-          textureCanvas.width = 2048
-          textureCanvas.height = 8192
-
-          const texture = new THREE.CanvasTexture(textureCanvas)
-          texture.WrapS = THREE.RepeatWrapping
-          texture.wrapT = THREE.RepeatWrapping
-          texture.minFilter = THREE.LinearFilter
-          texture.magFilter = THREE.LinearFilter
-          texture.anisotropy = Math.min(
-            4,
-            renderer.capabilities.getMaxAnisotropy()
-          )
-
-          const parentMaterial = new THREE.MeshBasicMaterial({
-            map: texture,
-            side: THREE.DoubleSide
-          })
-
-          const parentMesh = new THREE.Mesh(parentGeometry, parentMaterial)
-          parentMesh.position.set(0, 0, 0)
-          parentMesh.rotation.x = THREE.MathUtils.degToRad(-20)
-          parentMesh.rotation.y = THREE.MathUtils.degToRad(20)
-          scene.add(parentMesh)
-
-          const distance = 17.5
-          const heightOffset = 5
-          const offsetX = distance * Math.sin(THREE.MathUtils.degToRad(20))
-          const offsetZ = distance * Math.cos(THREE.MathUtils.degToRad(20))
-
-          camera.position.set(offsetX, heightOffset, offsetZ)
-          camera.lookAt(0, -2, 0)
-          camera.rotation.z = THREE.MathUtils.degToRad(-5)
-
-          function updateTexture(offset = 0) {
-            ctx.fillStyle = '#000'
-            ctx.fillRect(0, 0, textureCanvas.width, textureCanvas.height)
-
-            const fontSize = 180
-            ctx.font = `500 ${fontSize}px Arial`
-            ctx.textAlign = 'center'
-            ctx.textBaseline = 'middle'
-
-            const extraSlides = 2
-
-            for (let i = -extraSlides; i < totalSlides + extraSlides; i++) {
-              let slideY = -i * (slideHeight + gap)
-              slideY += offset * cycleHeight
-
-              const textureY = (slideY / cycleHeight) * textureCanvas.height
-              let wrappedY = textureY % textureCanvas.height
-              if (wrappedY < 0) wrappedY += textureCanvas.height
-
-              let slideIndex = ((-i % totalSlides) + totalSlides) % totalSlides
-              let slideNumber = slideIndex + 1
-
-              const slideRect = {
-                x: textureCanvas.width * 0.05,
-                y: wrappedY,
-                width: textureCanvas.width * 0.9,
-                height: (slideHeight / cycleHeight) * textureCanvas.height
-              }
-
-              const img = images[slideNumber - 1]
-              if (img) {
-                const imgAspect = img.width / img.height
-                const rectAspect = slideRect.width / slideRect.height
-
-                let drawWidth, drawHeight, drawX, drawY
-
-                if (imgAspect > rectAspect) {
-                  drawHeight = slideRect.height
-                  drawWidth = drawHeight * imgAspect
-                  drawX = slideRect.x + (slideRect.width - drawWidth) / 2
-                  drawY = slideRect.y
-                } else {
-                  drawWidth = slideRect.width
-                  drawHeight = drawWidth / imgAspect
-                  drawX = slideRect.x
-                  drawY = slideRect.y + (slideRect.height - drawHeight) / 2
-                }
-
-                ctx.save()
-                ctx.beginPath()
-                ctx.roundRect(
-                  slideRect.x,
-                  slideRect.y,
-                  slideRect.width,
-                  slideRect.height
-                )
-                ctx.clip()
-                ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight)
-                ctx.restore()
-
-                ctx.fillStyle = 'white'
-              }
-            }
-            texture.needsUpdate = true
-          }
-          let currentScroll = 0
-          lenis.on(
-            'scroll',
-            ({ scroll, limit, velocity, direction, progress }) => {
-              currentScroll = scroll / limit
-              updateTexture(-currentScroll)
-              renderer.render(scene, camera)
-            }
-          )
-
-          let resizeTimeout
-          window.addEventListener('resize', () => {
-            if (resizeTimeout) clearTimeout(resizeTimeout)
-            resizeTimeout = setTimeout(() => {
-              camera.aspect = window.innerWidth / window.innerHeight
-              camera.updateProjectionMatrix()
-              renderer.setSize(window.innerWidth, window.innerHeight)
-            }, 250)
-          })
-
-          updateTexture(0)
-          renderer.render(scene, camera)
+      const cards = [];
+      stacks.forEach((st,i)=>{
+        const base = angles[i];
+        for(let j=0;j<per;j++){
+          const tex = makeTex(st.label, st.icon);
+          const H3 = 8, W3 = H3*(tex.image.width/tex.image.height);
+          const m = new THREE.Mesh(
+            new THREE.PlaneGeometry(W3,H3),
+            new THREE.MeshBasicMaterial({ map:tex, transparent:true, opacity:1 })
+          );
+          m.userData = { initAngle:base, initRadius:rad, turns:2, delay:j/per*0.8 };
+          m.position.set(Math.cos(base)*rad, Math.sin(base)*rad, 0);
+          scene.add(m);
+          cards.push(m);
         }
+      });
 
-        loadImages()
-      })
-    </script>
-  </body>
+      let target=0, curr=0, lastScroll=0, grav=0, lt=0;
+      window.addEventListener('scroll', ()=>{
+        const s = scrollY, mx = document.body.scrollHeight - innerHeight;
+        target = Math.min(Math.max(s/mx,0),1);
+        lastScroll = performance.now();
+      });
+
+      function animate(time){
+        if(!lt) lt = time;
+        const dt = time - lt; lt = time;
+        curr += (target - curr)*0.05;
+
+        // пульс дыры
+        const pulse = 1 + 0.05*Math.sin(time*0.002);
+        hole.scale.set(baseScale*pulse, baseScale*pulse, 1);
+        textSpr.scale.set(30*pulse, 8*pulse, 1);
+
+        const scrolling = (time - lastScroll) < 200;
+        if(!scrolling) grav = Math.min(1, grav + dt*0.000005);
+        const globalP = scrolling ? easeOut(curr) : Math.max(easeOut(curr), grav);
+
+        cards.forEach(m=>{
+          const { initAngle, initRadius, turns, delay } = m.userData;
+          let p = THREE.MathUtils.clamp((curr - delay)/(1 - delay), 0, 1);
+          const pe = easeOut(p), pc = scrolling ? pe : Math.max(pe, grav);
+          const ang = initAngle + pc*turns*Math.PI*2;
+          const r   = initRadius * (1 - pc);
+          m.position.set(Math.cos(ang)*r, Math.sin(ang)*r, 0);
+          const sc = 1 - pc;
+          m.scale.set(sc, sc, 1);
+          m.material.opacity = sc;
+          const dir = new THREE.Vector3(-m.position.x, -m.position.y, 0).normalize();
+          const ax  = new THREE.Vector3(dir.y, -dir.x, 0).normalize();
+          m.quaternion.setFromAxisAngle(ax, -globalP*Math.PI/4);
+        });
+
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      }
+      requestAnimationFrame(animate);
+    })();
+
+    // таймлайн
+    document.addEventListener('scroll', () => {
+      const steps = document.querySelectorAll('.process-step');
+      const psSec = document.querySelector('.process-screen');
+      const mid = scrollY + innerHeight/2;
+      const start = psSec.offsetTop, h = psSec.offsetHeight;
+      let rel = (mid - start)/h; rel = Math.max(0, Math.min(1, rel));
+      const idx = Math.floor(rel * steps.length);
+      steps.forEach((s,i) => {
+        s.classList.toggle('visible', i <= idx);
+        s.classList.toggle('active',  i === idx);
+      });
+    });
+
+  });
+  </script>
+</body>
 </html>
